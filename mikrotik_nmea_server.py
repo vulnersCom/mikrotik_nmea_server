@@ -90,18 +90,22 @@ class NMEAHandler(socketserver.BaseRequestHandler):
     """
 
     def handle(self):
-        address = self.client_address[0]
-        if not clients_data_queue.get(address):
-            clients_data_queue[address] = queue.Queue(maxsize=50)
+        while 1:
+            address = self.client_address[0]
+            if not clients_data_queue.get(address):
+                clients_data_queue[address] = queue.Queue(maxsize=50)
 
-        while not clients_data_queue[address].empty():
-            data = clients_data_queue[address].get()
-            self.request.sendall(data.encode('utf-8'))
-            logging.debug("Responding %s with :%s" % (address, data))
+            while not clients_data_queue[address].empty():
+                data = clients_data_queue[address].get()
+                try:
+                    self.request.sendall(data.encode('utf-8'))
+                    print("Responding %s with :%s" % (address, data))
+                except:
+                    return
 
 clients_data_queue = ThreadSafeDict()
 syslog_server = socketserver.UDPServer((RECEIVER_HOST, RECEIVER_PORT), SyslogUDPHandler)
-nmea_server = socketserver.TCPServer((SERVER_HOST, SERVER_PORT), NMEAHandler)
+nmea_server = socketserver.ThreadingTCPServer((SERVER_HOST, SERVER_PORT), NMEAHandler)
 syslog_thread = ExceptionThread(target = syslog_server.serve_forever)
 nmea_thread = ExceptionThread(target = nmea_server.serve_forever)
 
