@@ -24,6 +24,7 @@ import logging
 import signal
 from threading import Thread, Lock
 import queue
+import time
 
 
 
@@ -91,6 +92,7 @@ class NMEAHandler(socketserver.BaseRequestHandler):
 
     def handle(self):
         while 1:
+            time.sleep(0.01)
             address = self.client_address[0]
             if not clients_data_queue.get(address):
                 clients_data_queue[address] = queue.Queue(maxsize=50)
@@ -106,6 +108,7 @@ class NMEAHandler(socketserver.BaseRequestHandler):
 clients_data_queue = ThreadSafeDict()
 syslog_server = socketserver.UDPServer((RECEIVER_HOST, RECEIVER_PORT), SyslogUDPHandler)
 nmea_server = socketserver.ThreadingTCPServer((SERVER_HOST, SERVER_PORT), NMEAHandler)
+nmea_server.socket.setblocking(1)
 syslog_thread = ExceptionThread(target = syslog_server.serve_forever)
 nmea_thread = ExceptionThread(target = nmea_server.serve_forever)
 
